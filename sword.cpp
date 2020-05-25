@@ -15,18 +15,24 @@
 #define SaxonBounty           650
 #define TrollBounty           850
 
-bool    hadExcalibur = false;
-bool    beatUltimecia = false;
-int     winCount = 0;
-int     loseCount = 0;
-int     eventIndex = 0;
+bool    hadExcalibur        = false;
+bool    beatUltimecia       = false;
+int     winCount            = 0;
+int     loseCount           = 0;
+int     eventIndex          = 0;
 //Check for having any treasure
-bool    hadPaladinShield = false;
-bool    hadLancelotSpear = false;
-bool    hadGuinevereHair = false;
+bool    hadPaladinShield    = false;
+bool    hadLancelotSpear    = false;
+bool    hadGuinevereHair    = false;
 //Status variable
-bool beingPoisoned = false;
-int poisonTime = 0; 
+bool beingPoisoned          = false;
+int poisonTime              = 0; 
+bool hadOdinHelp            = false;
+int odinHelpTime            = 0;
+bool hadBeatOmega = false;
+bool isDragonKnight = false;
+bool hadLionHeart = false;
+
 
 
 enum EVENT{
@@ -64,16 +70,7 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
     int   damage = opponentDamage * levelO * 10;
-    std::clog << "Compare level: " << theKnight.level << " " << levelO << '\n';
-    if ( ~hadExcalibur || theKnight.level < levelO) {
-        theKnight.HP -= damage;
-        loseCount++;
-        if (theKnight.HP <= 0) {
-            callPhoenix(theKnight, maxHP);
-            clearUnfavorableStatus();
-        }
-    }
-    else {
+    if (theKnight.level > levelO) {
         if (beingPoisoned) {
             theKnight.HP -= damage;
             if (theKnight.HP <= 0) {
@@ -82,15 +79,26 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
             }
         }
         theKnight.gil += opponentBounty;
-        winCount++;
+        winCount++;   
     }
-    std::clog << "count " << winCount << " " << loseCount << '\n';
+    else {
+        theKnight.HP -= damage;
+        loseCount++;
+        if (theKnight.HP <= 0) {
+            callPhoenix(theKnight, maxHP);
+            clearUnfavorableStatus();
+        }
+    }
 }
 //Event handel for event 6
 void dealWithTornBery(knight& theKnight, int event){
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
-    if ( ~hadExcalibur || theKnight.level < levelO) {
+    if (theKnight.level > levelO || hadOdinHelp) {
+        theKnight.level = (theKnight.level < 10) ? (theKnight.level + 1) : 10;  
+        winCount++;
+    }
+    else {
         if (theKnight.antidote) theKnight.antidote--;
         else {
             beingPoisoned = true;
@@ -98,17 +106,72 @@ void dealWithTornBery(knight& theKnight, int event){
         }
         loseCount++;
     }
-    else {
-        theKnight.level = (theKnight.level < 10) ? (theKnight.level + 1) : 10;  
+}
+
+void dealWithQueenOfCards(knight &theKnight, int event){
+    int   b = event % 10;
+    int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
+    if (theKnight.level > levelO || hadOdinHelp) {
+        theKnight.gil *= 2;
         winCount++;
     }
+    else {
+        theKnight.gil /= 2;
+        loseCount++;
+        
+    }
 }
+
+//Won't work with friendly number. Still need an update version
+void tradeWithNina(knight& theKnight){
+    if (theKnight.gil < 50) return;
+    if (beingPoisoned) {
+        beingPoisoned = false;
+        poisonTime = 0;
+        theKnight.gil -=50;
+    }
+    if (theKnight.gil) {
+        int tradeRatio = maxHP - theKnight.HP;
+        if (tradeRatio > theKnight.gil) {
+            theKnight.HP += theKnight.gil;
+            theKnight.gil = 0;
+        }
+        else {
+            theKnight.HP = maxHP;
+            theKnight.gil -= tradeRatio;
+        }
+    }
+}
+void merlinHelp(knight &theKnight){
+    if (beingPoisoned) {
+        beingPoisoned = false;
+        poisonTime = 0;
+    }
+    int tempLevel = theKnight.level;
+    theKnight.level = (theKnight.level == 10) ? 10 : theKnight.level + 1;
+    maxHP = (tempLevel == theKnight.level) ? maxHP : ((maxHP < 900) ? maxHP + 100 : 999);
+    theKnight.HP = maxHP;
+}
+void fightWithOmega(knight &theKnight) {
+    if (theKnight.level == 10 && hadExcalibur || isDragonKnight && hadLionHeart) {
+        int HPincrease = 10 - theKnight.level;
+        theKnight.level = 10;
+        maxHP = (maxHP + HPincrease * 100) > 999 ? 999 : maxHP + HPincrease * 100;
+        theKnight.gil = 999;
+    } else {
+        theKnight.HP = 0;
+        callPhoenix(theKnight, maxHP);
+        clearUnfavorableStatus();
+    }
+}
+
 //Check for current status;
 void endOfEventCheck(){
     if (beingPoisoned) {
         poisonTime--;
         if (poisonTime = 0) beingPoisoned = false;
     }
+    if (hadOdinHelp) odinHelpTime--;
 }
 
 
@@ -144,7 +207,6 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                         if (hadPaladinShield && hadLancelotSpear && hadGuinevereHair) hadExcalibur = true;
                         break;
                     case MadBear:
-                    std::clog << "reach" << '\n';
                         fight(theKnight, eventIndex, MadBearDamage, MadBearBounty);
                         break;
                     case AmazonMoonBringer:
@@ -162,8 +224,36 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                     case TornBery:
                         if (beingPoisoned) break;
                         else dealWithTornBery(theKnight, eventIndex);
-                        std::clog << "Status check: " << beingPoisoned << '\n';
-                        std::clog << "Data: " << theKnight.HP << " " << theKnight.level << " " << theKnight.gil << " " << theKnight.antidote << '\n';
+                        break;
+                    case QueenOfCards:
+                        dealWithQueenOfCards(theKnight, eventIndex);
+                        break;
+                    case NinaDeRings:
+                        tradeWithNina(theKnight);
+                        break;
+                    case DurianGarden:
+                        if (beingPoisoned) {
+                            beingPoisoned = false;
+                            poisonTime = 0;
+                        }
+                        theKnight.HP = maxHP;
+                        nPetal  = (nPetal > 94) ? 99 : nPetal + 5;
+                        break;
+                    case Atidode:
+                        if (beingPoisoned) {
+                            beingPoisoned = false;
+                            poisonTime = 0;
+                        }else theKnight.antidote++;
+                        break;
+                    case Odin:
+                        hadOdinHelp = true;
+                        odinHelpTime = 6;
+                        break;
+                    case Merlin:
+                        merlinHelp(theKnight);
+                        break;
+                    case OmegaWeapon:
+                        if (!hadBeatOmega) 
                         break;
                     case PaladinShield:
                         hadPaladinShield = true;
@@ -181,8 +271,9 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                 --nPetal;
             }
             if (!beatUltimecia) {
+                int tempLevel = theKnight.level;
                 theKnight.level = (theKnight.level == 10) ? 10 : theKnight.level + 1;
-                maxHP = ((maxHP + 100) > 999) ? 999 : maxHP + 100;
+                maxHP = ((maxHP + 100) > 999) && (theKnight.level != tempLevel) ? 999 : maxHP + 100;
             }
         }
         if (beatUltimecia) {
@@ -195,7 +286,6 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
         } 
     }
     // success or failure?
-    //if (bFlag) bFlag = 1;
     pReturn = (bFlag)? new report : NULL;
     
     if (pReturn != nullptr) {
