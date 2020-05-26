@@ -15,23 +15,32 @@
 #define SaxonBounty           650
 #define TrollBounty           850
 
-bool    hadExcalibur        = false;
-bool    beatUltimecia       = false;
-int     winCount            = 0;
-int     loseCount           = 0;
-int     eventIndex          = 0;
-//Check for having any treasure
-bool    hadPaladinShield    = false;
-bool    hadLancelotSpear    = false;
-bool    hadGuinevereHair    = false;
-//Status variable
-bool beingPoisoned          = false;
-int poisonTime              = 0; 
-bool hadOdinHelp            = false;
-int odinHelpTime            = 0;
-bool hadBeatOmega = false;
-bool isDragonKnight = false;
-bool hadLionHeart = false;
+bool    hadExcalibur            = false;
+bool    beatUltimecia           = false;
+int     winCount                = 0;
+int     loseCount               = 0;
+int     eventIndex              = 0;
+/*Special Character*/
+bool    isArthur                = false;
+bool    isLancelot              = false;
+bool    isGuinevere             = false;
+bool    isDragonKnight          = false;
+/*Check for having any treasure*/
+bool    hadPaladinShield        = false;
+bool    hadLancelotSpear        = false;
+bool    hadGuinevereHair        = false;
+/*Status variable*/
+bool    beingPoisoned           = false;
+int     poisonTime              = 0; 
+bool    hadOdinHelp             = false;
+int     odinHelpTime            = 0;
+bool    odinIsDead              = false;
+bool    hadBeatOmega            = false;
+int    getOverChallenge        = 0;
+/*Special Items*/
+bool    hadLionHeart            = false;
+bool    hadMythril              = false;
+bool    hadScarletHakama        = false;
 
 
 
@@ -64,14 +73,21 @@ void clearUnfavorableStatus() {
     beingPoisoned = 0;
     poisonTime = 0;
 }
-
+//Chech for Eternal Love
+bool hadEternalLove(){
+    if (hadGuinevereHair && hadLancelotSpear && (!hadExcalibur)) return true;
+    else if (isArthur && hadGuinevereHair) return true; 
+    else if (isLancelot && hadGuinevereHair) return true;
+    else if (isGuinevere && hadLancelotSpear) return true;
+    else return false;
+}
 //Event handle for event 1 to 5
 void fight(knight& theKnight, int event, float opponentDamage, int opponentBounty) {
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
     int   damage = opponentDamage * levelO * 10;
-    if (theKnight.level > levelO) {
-        if (beingPoisoned) {
+    if (theKnight.level >= levelO || hadOdinHelp) {
+        if (beingPoisoned && !hadMythril) {
             theKnight.HP -= damage;
             if (theKnight.HP <= 0) {
                 callPhoenix(theKnight, maxHP);
@@ -82,19 +98,19 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
         winCount++;   
     }
     else {
-        theKnight.HP -= damage;
-        loseCount++;
+        if (!hadMythril)theKnight.HP -= damage;
         if (theKnight.HP <= 0) {
             callPhoenix(theKnight, maxHP);
             clearUnfavorableStatus();
         }
+        loseCount++;
     }
 }
 //Event handel for event 6
 void dealWithTornBery(knight& theKnight, int event){
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
-    if (theKnight.level > levelO || hadOdinHelp) {
+    if (theKnight.level >= levelO || hadOdinHelp) {
         theKnight.level = (theKnight.level < 10) ? (theKnight.level + 1) : 10;  
         winCount++;
     }
@@ -111,12 +127,12 @@ void dealWithTornBery(knight& theKnight, int event){
 void dealWithQueenOfCards(knight &theKnight, int event){
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
-    if (theKnight.level > levelO || hadOdinHelp) {
+    if (theKnight.level >= levelO || hadOdinHelp) {
         theKnight.gil *= 2;
         winCount++;
     }
     else {
-        theKnight.gil /= 2;
+        if (!hadScarletHakama) theKnight.gil /= 2;
         loseCount++;
         
     }
@@ -128,17 +144,17 @@ void tradeWithNina(knight& theKnight){
     if (beingPoisoned) {
         beingPoisoned = false;
         poisonTime = 0;
-        theKnight.gil -=50;
+        if (!hadScarletHakama) theKnight.gil -=50;
     }
     if (theKnight.gil) {
         int tradeRatio = maxHP - theKnight.HP;
         if (tradeRatio > theKnight.gil) {
             theKnight.HP += theKnight.gil;
-            theKnight.gil = 0;
+            if (!hadScarletHakama) theKnight.gil = 0;
         }
         else {
             theKnight.HP = maxHP;
-            theKnight.gil -= tradeRatio;
+            if (!hadScarletHakama) theKnight.gil -= tradeRatio;
         }
     }
 }
@@ -158,11 +174,41 @@ void fightWithOmega(knight &theKnight) {
         theKnight.level = 10;
         maxHP = (maxHP + HPincrease * 100) > 999 ? 999 : maxHP + HPincrease * 100;
         theKnight.gil = 999;
+        winCount++;
     } else {
-        theKnight.HP = 0;
-        callPhoenix(theKnight, maxHP);
-        clearUnfavorableStatus();
+        if (!hadMythril) {
+            theKnight.HP = 0;
+            callPhoenix(theKnight, maxHP);
+            clearUnfavorableStatus();
+        }
+        loseCount++;
     }
+}
+void fightWithHades(knight &theKnight, int event){
+    if (hadOdinHelp) {
+        hadOdinHelp = false;
+        odinHelpTime = 0;
+        odinIsDead = true;
+    }
+    if (hadEternalLove()) {
+        hadMythril = true;
+        winCount++;
+        return;
+    }
+    int   b = event % 10;
+    int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
+    if (theKnight.level >= levelO) {
+        hadMythril = true;
+        winCount++;
+    }
+    else {
+        if (!hadMythril) {
+            theKnight.HP = 0;
+            callPhoenix(theKnight, maxHP);
+        }
+        loseCount++;
+    }
+    return;
 }
 
 //Check for current status;
@@ -183,7 +229,8 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
     while (true) {
         // std::clog << "Enter castle" << '\n'; 
         // std::clog << "Data: " << theKnight.HP << " " << theKnight.level << " " << theKnight.gil << " " << theKnight.antidote << '\n';
-        for (int i = 0; i < nCastle ; i++) {  
+        for (int i = 0; i < nCastle ; i++) {
+            eventIndex = 0;  
             for (int j = 0; j < arrCastle[i].nEvent; j++) {
                 eventIndex++;
                 if (beatUltimecia) {
@@ -198,7 +245,8 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                             if (beingPoisoned) theKnight.HP = theKnight.HP < 3 ? 1 : theKnight.HP / 3;
                             winCount++;
                             beatUltimecia = true;
-                        } else {
+                        } 
+                        else {
                             theKnight.HP = theKnight.HP < 3 ? 1 : theKnight.HP / 3;
                             loseCount++;
                         }
@@ -232,6 +280,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                         tradeWithNina(theKnight);
                         break;
                     case DurianGarden:
+                        if (hadScarletHakama) nPetal = 99;
                         if (beingPoisoned) {
                             beingPoisoned = false;
                             poisonTime = 0;
@@ -246,6 +295,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                         }else theKnight.antidote++;
                         break;
                     case Odin:
+                        if (odinIsDead) break;
                         hadOdinHelp = true;
                         odinHelpTime = 6;
                         break;
@@ -253,7 +303,17 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                         merlinHelp(theKnight);
                         break;
                     case OmegaWeapon:
-                        if (!hadBeatOmega) 
+                        if (!hadBeatOmega) fightWithOmega(theKnight);
+                        break;
+                    case Hades:
+                        fightWithHades(theKnight, eventIndex);
+                        break;
+                    case ScarletHakama:
+                        hadScarletHakama = true;
+                        break;
+                    case LockedDoor:
+                        if (theKnight.level > (eventIndex % 10)) getOverChallenge = 1;
+                        else getOverChallenge = 2;
                         break;
                     case PaladinShield:
                         hadPaladinShield = true;
@@ -269,6 +329,10 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                 }
                 endOfEventCheck();
                 --nPetal;
+                if (getOverChallenge == 2) {
+                    getOverChallenge = 0;
+                    break;
+                }    
             }
             if (!beatUltimecia) {
                 int tempLevel = theKnight.level;
@@ -283,7 +347,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
         else if ((nPetal == 0) && !beatUltimecia) {
             bFlag = 0;
             break;
-        } 
+        }
     }
     // success or failure?
     pReturn = (bFlag)? new report : NULL;
