@@ -37,12 +37,16 @@ bool    hadOdinHelp             = false;
 int     odinHelpTime            = 0;
 bool    odinIsDead              = false;
 bool    hadBeatOmega            = false;
-int    getOverChallenge         = 0;
+int     getOverChallenge        = 0;
 /*Special Items*/
 bool    hadLionHeart            = false;
 int     lionHeartTime           = 6;
 bool    hadMythril              = false;
 bool    hadScarletHakama        = false;
+/*For mode 1 only*/
+int     firstTreasureToPick     = 0;
+int     secondTreasureToPick    = 0;
+int     lastTreasureToPick      = 0;
 
 
 
@@ -146,8 +150,8 @@ bool isFriendlyPair(int HP, int gil) {
     int sum_2 =0;
     for (int i = 1; i < HP / 2; i++) if (HP % i == 0) sum_1 += i;
     for (int i = 1; i < gil / 2; i++) if (gil % i == 0) sum_2 += i;
-    float abundance_1  = (float)(sum_1 / HP);
-    float abundance_2  = (float)(sum_2 / gil);
+    float abundance_1  = (float)sum_1 / HP;
+    float abundance_2  = (float)sum_2 / gil;
     if (abundance_1 == abundance_2) return true;
     else return false;
 
@@ -262,7 +266,7 @@ void endOfEventCheck(){
 
 bool isPaladincheck(int hp){
 	int m = hp / 2;
-	for (int i = 2; i < m; i++) {
+	for (int i = 2; i <= m; i++) {
 		if (hp % i == 0) return false;
 	}
 	return true;
@@ -275,6 +279,58 @@ bool isDragonKnightCheck(int HP){
         }
     }
     return false;
+}
+void compareHashValue() {
+    int hashOfPaladinShield = hash(PaladinShield);
+    int hashOfLancelotSpear = hash(LancelotSpear);
+    int hashOfGuinevereHair = hash(GuinevereHair);
+    if (hashOfPaladinShield > hashOfLancelotSpear) {
+        if (hashOfLancelotSpear > hashOfGuinevereHair) {
+            firstTreasureToPick = GuinevereHair;
+            secondTreasureToPick = LancelotSpear;
+            lastTreasureToPick = PaladinShield;
+        }
+        else {
+            firstTreasureToPick = LancelotSpear;
+            secondTreasureToPick = GuinevereHair;
+            lastTreasureToPick = PaladinShield;
+        }
+    }
+    else {
+        if (hashOfLancelotSpear < hashOfGuinevereHair) {
+            firstTreasureToPick = PaladinShield;
+            secondTreasureToPick = LancelotSpear;
+            lastTreasureToPick = GuinevereHair;
+        }
+        else {
+            if(hashOfPaladinShield < hashOfGuinevereHair) {
+                firstTreasureToPick = PaladinShield;
+                secondTreasureToPick = GuinevereHair;
+                lastTreasureToPick = LancelotSpear;
+            }
+            else {
+                firstTreasureToPick = GuinevereHair;
+                secondTreasureToPick = PaladinShield;
+                lastTreasureToPick = LancelotSpear;
+            }
+        }
+    }
+    //std::clog << firstTreasureToPick << " " << secondTreasureToPick << " " << lastTreasureToPick << '\n';
+}
+bool hadPickThisTreasure(int treasure) {
+    switch (treasure) {
+        case PaladinShield:
+            return hadPaladinShield;
+            break;
+        case LancelotSpear:
+            return hadLancelotSpear;
+            break;
+        case GuinevereHair:
+            return hadGuinevereHair;
+            break;
+        default:
+            break;
+    }
 }
 
 report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mode, int nPetal)
@@ -295,6 +351,8 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
         hadPaladinShield = true;
     }
     else if (isDragonKnightCheck(theKnight.HP)) isDragonKnight = true;
+    //std::clog << isArthur << " " << isLancelot << " " << isPaladin << " " << isDragonKnight << " " << isGuinevere<< '\n';
+    if (mode == 1) compareHashValue();
     //fighting for the existence of mankind here
     while (true) {
         for (int i = 0; i < nCastle ; i++) {
@@ -388,13 +446,52 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                         else getOverChallenge = 2;
                         break;
                     case PaladinShield:
-                        hadPaladinShield = true;
+                        if (hadPaladinShield) break;
+                        else if(mode == 1) {
+                            if (firstTreasureToPick == PaladinShield) hadPaladinShield = true;
+                            else {
+                                if (secondTreasureToPick == PaladinShield) {
+                                    if (hadPickThisTreasure(firstTreasureToPick)) hadPaladinShield = true;
+                                }
+                                else if (lastTreasureToPick == PaladinShield) {
+                                    if (hadPickThisTreasure(firstTreasureToPick) && hadPickThisTreasure(secondTreasureToPick))
+                                        hadPaladinShield = true;
+                                }
+                            }
+                        }
+                        else hadPaladinShield = true;
                         break;
-                    case LancelotSpear: 
-                        hadLancelotSpear = true;
+                    case LancelotSpear:
+                        if (hadLancelotSpear) break;
+                        else if(mode == 1) {
+                            if (firstTreasureToPick == LancelotSpear) hadLancelotSpear = true;
+                            else {
+                                if (secondTreasureToPick == LancelotSpear) {
+                                    if (hadPickThisTreasure(firstTreasureToPick)) hadLancelotSpear = true;
+                                }
+                                else if (lastTreasureToPick == LancelotSpear) {
+                                    if (hadPickThisTreasure(firstTreasureToPick) && hadPickThisTreasure(secondTreasureToPick))
+                                        hadLancelotSpear = true;
+                                }
+                            }
+                        }
+                        else hadLancelotSpear = true;
                         break;
                     case GuinevereHair:
-                        hadGuinevereHair = true;
+                        if (hadGuinevereHair) break;
+                        else if(mode == 1) {
+                            if (firstTreasureToPick == GuinevereHair) hadGuinevereHair = true;
+                            else {
+                                if (secondTreasureToPick == GuinevereHair) {
+                                    if (hadPickThisTreasure(firstTreasureToPick)) hadGuinevereHair = true;
+                                }
+                                else if (lastTreasureToPick == GuinevereHair) {
+                                    if (hadPickThisTreasure(firstTreasureToPick) && hadPickThisTreasure(secondTreasureToPick))
+                                        hadGuinevereHair = true;
+                                }
+                            }
+                        }
+                        else hadGuinevereHair = true;
                         break;
                     default:
                         break;
