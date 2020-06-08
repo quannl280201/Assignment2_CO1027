@@ -47,9 +47,6 @@ bool    hadScarletHakama        = false;
 int     firstTreasureToPick     = 0;
 int     secondTreasureToPick    = 0;
 int     lastTreasureToPick      = 0;
-
-
-
 enum EVENT{
     MadBear = 1,
     AmazonMoonBringer,
@@ -73,7 +70,6 @@ enum EVENT{
     Excalibur,
     Ultimecia
 };
-
 //Clear all unfavorable status
 void clearUnfavorableStatus() {
     beingPoisoned = 0;
@@ -92,6 +88,9 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
     int   damage = opponentDamage * levelO * 10;
+    // std::clog << "Check: " << isArthur << " " << isLancelot << " " << isPaladin << " " << isDragonKnight << " " << isGuinevere<< '\n';
+    //std::clog << "Compare level: " << theKnight.level << " " << levelO << '\n';
+    // std::clog << "Odin: " << hadOdinHelp << '\n';
     if (isArthur || isLancelot || isPaladin || theKnight.level >= levelO || hadOdinHelp) {
         if (beingPoisoned && !hadMythril) {
             theKnight.HP -= damage;
@@ -100,10 +99,11 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
                 clearUnfavorableStatus();
             }
         }
-        theKnight.gil += opponentBounty;
+        theKnight.gil = (theKnight.gil + opponentBounty > 999) ? 999 : theKnight.gil + opponentBounty;
         winCount++;   
     }
     else {
+        //std::clog << "jump to this case" << '\n';
         if (isGuinevere && opponentDamage == MoonBringerDamage) return;
         if(beingPoisoned) theKnight.HP -= damage;
         if (!hadMythril)theKnight.HP -= damage;
@@ -118,7 +118,7 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
 void dealWithTornBery(knight& theKnight, int event){
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
-    if (isArthur || isLancelot || theKnight.level >= levelO || hadOdinHelp) {
+    if (isArthur || isLancelot || theKnight.level >= levelO || hadOdinHelp|| hadLionHeart) {
         theKnight.level = (theKnight.level < 10) ? (theKnight.level + 1) : 10;  
         winCount++;
     }
@@ -131,12 +131,11 @@ void dealWithTornBery(knight& theKnight, int event){
         loseCount++;
     }
 }
-
 void dealWithQueenOfCards(knight &theKnight, int event){
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
     if (isArthur || isLancelot || theKnight.level >= levelO || hadOdinHelp ) {
-        theKnight.gil *= 2;
+        theKnight.gil = ((theKnight.gil * 2) > 999) ? 999 : theKnight.gil*2;       
         winCount++;
     }
     else {
@@ -144,29 +143,28 @@ void dealWithQueenOfCards(knight &theKnight, int event){
         loseCount++;
     }
 }
-
 bool isFriendlyPair(int HP, int gil) {
     int sum_1 = 0;
     int sum_2 =0;
-    for (int i = 1; i < HP / 2; i++) if (HP % i == 0) sum_1 += i;
-    for (int i = 1; i < gil / 2; i++) if (gil % i == 0) sum_2 += i;
+    for (int i = 1; i <= HP ; i++) if (HP % i == 0) sum_1 += i;
+    for (int i = 1; i <= gil ; i++) if (gil % i == 0) sum_2 += i;
     float abundance_1  = (float)sum_1 / HP;
     float abundance_2  = (float)sum_2 / gil;
     if (abundance_1 == abundance_2) return true;
     else return false;
 
 }
-
 void tradeWithNina(knight& theKnight){
-    if (isFriendlyPair(theKnight.HP, theKnight.gil) || isPaladin) {
+    bool friendlyPair = isFriendlyPair(theKnight.HP, theKnight.gil);
+    //std::clog << "friend            sdasd   asda " << friendlyPair << '\n'; 
+    if (friendlyPair || isPaladin) {
         if (beingPoisoned) {
             beingPoisoned = false;
             poisonTime = 0;
         }
         theKnight.HP = maxHP;
-        hadLionHeart = true;
-        lionHeartTime = isPaladin ? 0 : 6;
-        
+        hadLionHeart = (friendlyPair) ? true : false;
+        lionHeartTime = (hadLionHeart) ? (isPaladin ? 0 : 6) : 0;
     }
     else if (isGuinevere) {
         if (beingPoisoned) {
@@ -240,7 +238,7 @@ void fightWithHades(knight &theKnight, int event){
     }
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
-    if (theKnight.level >= levelO) {
+    if (theKnight.level >= levelO || hadLionHeart) {
         hadMythril = true;
         winCount++;
     }
@@ -253,17 +251,21 @@ void fightWithHades(knight &theKnight, int event){
     }
     return;
 }
-
 //Check for current status;
 void endOfEventCheck(){
     if (beingPoisoned) {
         poisonTime--;
         if (poisonTime = 0) beingPoisoned = false;
     }
-    if (hadOdinHelp) odinHelpTime--;
-    if (hadLionHeart) lionHeartTime--;
+    if (hadOdinHelp) {
+        odinHelpTime--;
+        if (odinHelpTime == 0) hadOdinHelp = false;
+    }
+    if (hadLionHeart) {
+        lionHeartTime--;
+        if (lionHeartTime == 0 && !isPaladin) hadLionHeart = false;
+    }
 }
-
 bool isPaladincheck(int hp){
 	int m = hp / 2;
 	for (int i = 2; i <= m; i++) {
@@ -356,18 +358,25 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
     //fighting for the existence of mankind here
     while (true) {
         for (int i = 0; i < nCastle ; i++) {
-            eventIndex = 0;  
+            eventIndex = 0;
+            if (beatUltimecia) break;
             for (int j = 0; j < arrCastle[i].nEvent; j++) {
                 eventIndex++;
-                if (beatUltimecia) {
-                    break;
-                }
+                // std::cout << theKnight.HP << ' ' << theKnight.level << ' ' << theKnight.antidote << ' ' << theKnight.gil << std::endl; 
+                // std::clog << "Data: " << winCount << " " << loseCount << '\n';
+                // std::clog << "Event: " << eventIndex << " " << arrCastle[i].arrEvent[j] << '\n';
+                // std::clog << "Lionheat: " << hadLionHeart << '\n';
+                // std::clog << "Exca: " << hadExcalibur << '\n';
+                // std::clog << "Mythirl " << hadMythril << '\n';
+                // std::clog << "maxHP " << maxHP << '\n';
+                // std::clog << "Beat Ulti " << beatUltimecia << '\n';
+                if (beatUltimecia) break;
                 else if (!isArthur && (nPetal == 0) && !beatUltimecia) {
                     break;
                 }
                 switch (arrCastle[i].arrEvent[j]) {
                     case Ultimecia: 
-                        if (hadExcalibur == true) {
+                        if (hadExcalibur || hadLionHeart) {
                             if (beingPoisoned) theKnight.HP = theKnight.HP < 3 ? 1 : theKnight.HP / 3;
                             winCount++;
                             beatUltimecia = true;
@@ -377,7 +386,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                                 loseCount++;
                                 break;
                             }
-                            theKnight.HP = theKnight.HP < 3 ? 1 : theKnight.HP / 3;
+                            if (!hadMythril) theKnight.HP = theKnight.HP < 3 ? 1 : theKnight.HP / 3;
                             loseCount++;
                         }
                         break;
@@ -506,7 +515,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
             if (!beatUltimecia) {
                 int tempLevel = theKnight.level;
                 theKnight.level = (theKnight.level == 10) ? 10 : theKnight.level + 1;
-                maxHP = ((maxHP + 100) > 999) && (theKnight.level != tempLevel) ? 999 : maxHP + 100;
+                if (theKnight.level != tempLevel) maxHP = ((maxHP + 100) > 999)  ? 999 : maxHP + 100;
             }
         }
         if (beatUltimecia) {
@@ -520,7 +529,6 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
     }
     // success or failure?
     pReturn = (bFlag)? new report : NULL;
-    
     if (pReturn != nullptr) {
         pReturn->nPetal = nPetal;
         pReturn->nWin = winCount;
