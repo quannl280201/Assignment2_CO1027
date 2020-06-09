@@ -3,7 +3,6 @@
 #define _definition_h_
 #endif
 
-
 #define MadBearDamage         1
 #define MoonBringerDamage     1.5
 #define ElfDamages            4.5
@@ -88,10 +87,7 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
     int   damage = opponentDamage * levelO * 10;
-    // std::clog << "Check: " << isArthur << " " << isLancelot << " " << isPaladin << " " << isDragonKnight << " " << isGuinevere<< '\n';
-    //std::clog << "Compare level: " << theKnight.level << " " << levelO << '\n';
-    // std::clog << "Odin: " << hadOdinHelp << '\n';
-    if (isArthur || isLancelot || isPaladin || theKnight.level >= levelO || hadOdinHelp) {
+    if (isArthur || isLancelot || isPaladin || hadLionHeart || theKnight.level >= levelO || hadOdinHelp) {
         if (beingPoisoned && !hadMythril) {
             theKnight.HP -= damage;
             if (theKnight.HP <= 0) {
@@ -103,8 +99,10 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
         winCount++;   
     }
     else {
-        //std::clog << "jump to this case" << '\n';
-        if (isGuinevere && opponentDamage == MoonBringerDamage) return;
+        if (isGuinevere && opponentDamage == MoonBringerDamage) {
+            loseCount++;
+            return;
+        }
         if(beingPoisoned) theKnight.HP -= damage;
         if (!hadMythril)theKnight.HP -= damage;
         if (theKnight.HP <= 0) {
@@ -119,12 +117,14 @@ void dealWithTornBery(knight& theKnight, int event){
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
     if (isArthur || isLancelot || theKnight.level >= levelO || hadOdinHelp|| hadLionHeart) {
+        int tempLevel = theKnight.level;
         theKnight.level = (theKnight.level < 10) ? (theKnight.level + 1) : 10;  
+        maxHP = (theKnight.level > tempLevel) ? ((maxHP + 100 > 999) ? 999 : maxHP + 100) : maxHP;
         winCount++;
     }
     else {
-        if (theKnight.antidote) theKnight.antidote--;
-        else if (!isPaladin){
+        if (theKnight.antidote && !isDragonKnight && !isPaladin) theKnight.antidote--;
+        else if (!isPaladin && !isDragonKnight){
             beingPoisoned = true;
             poisonTime = 6;
         }
@@ -134,7 +134,7 @@ void dealWithTornBery(knight& theKnight, int event){
 void dealWithQueenOfCards(knight &theKnight, int event){
     int   b = event % 10;
     int   levelO = event > 6 ? (b > 5 ? b : 5) : b;
-    if (isArthur || isLancelot || theKnight.level >= levelO || hadOdinHelp ) {
+    if (isArthur || isLancelot || hadLionHeart || theKnight.level >= levelO || hadOdinHelp ) {
         theKnight.gil = ((theKnight.gil * 2) > 999) ? 999 : theKnight.gil*2;       
         winCount++;
     }
@@ -201,7 +201,7 @@ void merlinHelp(knight &theKnight){
     }
     int tempLevel = theKnight.level;
     theKnight.level = (theKnight.level == 10) ? 10 : theKnight.level + 1;
-    maxHP = (tempLevel == theKnight.level) ? maxHP : ((maxHP < 900) ? maxHP + 100 : 999);
+    maxHP = (theKnight.level > tempLevel) ? ((maxHP + 100 > 999) ? 999 : maxHP + 100) : maxHP;
     theKnight.HP = maxHP;
 }
 void fightWithOmega(knight &theKnight) {
@@ -210,6 +210,7 @@ void fightWithOmega(knight &theKnight) {
         theKnight.level = 10;
         maxHP = (maxHP + HPincrease * 100) > 999 ? 999 : maxHP + HPincrease * 100;
         theKnight.gil = 999;
+        hadBeatOmega = true;
         winCount++;
     } else {
         if (!hadMythril) {
@@ -255,7 +256,7 @@ void fightWithHades(knight &theKnight, int event){
 void endOfEventCheck(){
     if (beingPoisoned) {
         poisonTime--;
-        if (poisonTime = 0) beingPoisoned = false;
+        if (poisonTime == 0) beingPoisoned = false;
     }
     if (hadOdinHelp) {
         odinHelpTime--;
@@ -353,7 +354,6 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
         hadPaladinShield = true;
     }
     else if (isDragonKnightCheck(theKnight.HP)) isDragonKnight = true;
-    //std::clog << isArthur << " " << isLancelot << " " << isPaladin << " " << isDragonKnight << " " << isGuinevere<< '\n';
     if (mode == 1) compareHashValue();
     //fighting for the existence of mankind here
     while (true) {
@@ -362,18 +362,8 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
             if (beatUltimecia) break;
             for (int j = 0; j < arrCastle[i].nEvent; j++) {
                 eventIndex++;
-                // std::cout << theKnight.HP << ' ' << theKnight.level << ' ' << theKnight.antidote << ' ' << theKnight.gil << std::endl; 
-                // std::clog << "Data: " << winCount << " " << loseCount << '\n';
-                // std::clog << "Event: " << eventIndex << " " << arrCastle[i].arrEvent[j] << '\n';
-                // std::clog << "Lionheat: " << hadLionHeart << '\n';
-                // std::clog << "Exca: " << hadExcalibur << '\n';
-                // std::clog << "Mythirl " << hadMythril << '\n';
-                // std::clog << "maxHP " << maxHP << '\n';
-                // std::clog << "Beat Ulti " << beatUltimecia << '\n';
                 if (beatUltimecia) break;
-                else if (!isArthur && (nPetal == 0) && !beatUltimecia) {
-                    break;
-                }
+                else if (!isArthur && (nPetal == 0) && !beatUltimecia) break;              
                 switch (arrCastle[i].arrEvent[j]) {
                     case Ultimecia: 
                         if (hadExcalibur || hadLionHeart) {
@@ -495,8 +485,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                                     if (hadPickThisTreasure(firstTreasureToPick)) hadGuinevereHair = true;
                                 }
                                 else if (lastTreasureToPick == GuinevereHair) {
-                                    if (hadPickThisTreasure(firstTreasureToPick) && hadPickThisTreasure(secondTreasureToPick))
-                                        hadGuinevereHair = true;
+                                    if (hadPickThisTreasure(firstTreasureToPick) && hadPickThisTreasure(secondTreasureToPick)) hadGuinevereHair = true;
                                 }
                             }
                         }
@@ -515,7 +504,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
             if (!beatUltimecia) {
                 int tempLevel = theKnight.level;
                 theKnight.level = (theKnight.level == 10) ? 10 : theKnight.level + 1;
-                if (theKnight.level != tempLevel) maxHP = ((maxHP + 100) > 999)  ? 999 : maxHP + 100;
+                if (theKnight.level > tempLevel) maxHP = ((maxHP + 100) > 999)  ? 999 : maxHP + 100;
             }
         }
         if (beatUltimecia) {
@@ -529,7 +518,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
     }
     // success or failure?
     pReturn = (bFlag)? new report : NULL;
-    if (pReturn != nullptr) {
+    if (pReturn != NULL) {
         pReturn->nPetal = nPetal;
         pReturn->nWin = winCount;
         pReturn->nLose = loseCount;
