@@ -14,6 +14,7 @@
 #define SaxonBounty           650
 #define TrollBounty           850
 
+int     myMaxHP                 = 0;
 bool    hadExcalibur            = false;
 bool    beatUltimecia           = false;
 int     winCount                = 0;
@@ -91,7 +92,7 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
         if (beingPoisoned && !hadMythril) {
             theKnight.HP -= damage;
             if (theKnight.HP <= 0) {
-                callPhoenix(theKnight, maxHP);
+                callPhoenix(theKnight, myMaxHP);
                 clearUnfavorableStatus();
             }
         }
@@ -106,7 +107,7 @@ void fight(knight& theKnight, int event, float opponentDamage, int opponentBount
         if(beingPoisoned) theKnight.HP -= damage;
         if (!hadMythril)theKnight.HP -= damage;
         if (theKnight.HP <= 0) {
-            callPhoenix(theKnight, maxHP);
+            callPhoenix(theKnight, myMaxHP);
             clearUnfavorableStatus();
         }
         loseCount++;
@@ -119,7 +120,7 @@ void dealWithTornBery(knight& theKnight, int event){
     if (isArthur || isLancelot || theKnight.level >= levelO || hadOdinHelp|| hadLionHeart) {
         int tempLevel = theKnight.level;
         theKnight.level = (theKnight.level < 10) ? (theKnight.level + 1) : 10;  
-        maxHP = (theKnight.level > tempLevel) ? ((maxHP + 100 > 999) ? 999 : maxHP + 100) : maxHP;
+        myMaxHP = (theKnight.level > tempLevel) ? ((myMaxHP + 100 > 999) ? 999 : myMaxHP + 100) : myMaxHP;
         winCount++;
     }
     else {
@@ -152,17 +153,15 @@ bool isFriendlyPair(int HP, int gil) {
     float abundance_2  = (float)sum_2 / gil;
     if (abundance_1 == abundance_2) return true;
     else return false;
-
 }
 void tradeWithNina(knight& theKnight){
     bool friendlyPair = isFriendlyPair(theKnight.HP, theKnight.gil);
-    //std::clog << "friend            sdasd   asda " << friendlyPair << '\n'; 
     if (friendlyPair || isPaladin) {
         if (beingPoisoned) {
             beingPoisoned = false;
             poisonTime = 0;
         }
-        theKnight.HP = maxHP;
+        theKnight.HP = myMaxHP;
         hadLionHeart = (friendlyPair) ? true : false;
         lionHeartTime = (hadLionHeart) ? (isPaladin ? 0 : 6) : 0;
     }
@@ -171,7 +170,7 @@ void tradeWithNina(knight& theKnight){
             beingPoisoned = false;
             poisonTime = 0;
         }
-        theKnight.HP = maxHP;
+        theKnight.HP = myMaxHP;
         theKnight.gil = theKnight.gil > 949 ? 999 : theKnight.gil + 50;
     }
     else {
@@ -182,13 +181,13 @@ void tradeWithNina(knight& theKnight){
             if (!hadScarletHakama) theKnight.gil -=50;
         }
         if (theKnight.gil) {
-            int tradeRatio = maxHP - theKnight.HP;
+            int tradeRatio = myMaxHP - theKnight.HP;
             if (tradeRatio > theKnight.gil) {
                 theKnight.HP += theKnight.gil;
                 if (!hadScarletHakama) theKnight.gil = 0;
             }
             else {
-                theKnight.HP = maxHP;
+                theKnight.HP = myMaxHP;
                 if (!hadScarletHakama) theKnight.gil -= tradeRatio;
             }
         }
@@ -201,21 +200,21 @@ void merlinHelp(knight &theKnight){
     }
     int tempLevel = theKnight.level;
     theKnight.level = (theKnight.level == 10) ? 10 : theKnight.level + 1;
-    maxHP = (theKnight.level > tempLevel) ? ((maxHP + 100 > 999) ? 999 : maxHP + 100) : maxHP;
-    theKnight.HP = maxHP;
+    myMaxHP = (theKnight.level > tempLevel) ? ((myMaxHP + 100 > 999) ? 999 : myMaxHP + 100) : myMaxHP;
+    theKnight.HP = myMaxHP;
 }
 void fightWithOmega(knight &theKnight) {
     if (theKnight.level == 10 && hadExcalibur || isDragonKnight && hadLionHeart) {
         int HPincrease = 10 - theKnight.level;
         theKnight.level = 10;
-        maxHP = (maxHP + HPincrease * 100) > 999 ? 999 : maxHP + HPincrease * 100;
+        myMaxHP = (myMaxHP + HPincrease * 100) > 999 ? 999 : myMaxHP + HPincrease * 100;
         theKnight.gil = 999;
         hadBeatOmega = true;
         winCount++;
     } else {
         if (!hadMythril) {
             theKnight.HP = 0;
-            callPhoenix(theKnight, maxHP);
+            callPhoenix(theKnight, myMaxHP);
             clearUnfavorableStatus();
         }
         loseCount++;
@@ -246,7 +245,7 @@ void fightWithHades(knight &theKnight, int event){
     else {
         if (!hadMythril) {
             theKnight.HP = 0;
-            callPhoenix(theKnight, maxHP);
+            callPhoenix(theKnight, myMaxHP);
         }
         loseCount++;
     }
@@ -318,7 +317,6 @@ void compareHashValue() {
             }
         }
     }
-    //std::clog << firstTreasureToPick << " " << secondTreasureToPick << " " << lastTreasureToPick << '\n';
 }
 bool hadPickThisTreasure(int treasure) {
     switch (treasure) {
@@ -354,6 +352,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
         hadPaladinShield = true;
     }
     else if (isDragonKnightCheck(theKnight.HP)) isDragonKnight = true;
+    myMaxHP = theKnight.HP;
     if (mode == 1) compareHashValue();
     //fighting for the existence of mankind here
     while (true) {
@@ -414,7 +413,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
                             beingPoisoned = false;
                             poisonTime = 0;
                         }
-                        theKnight.HP = maxHP;
+                        theKnight.HP = myMaxHP;
                         nPetal  = (nPetal > 94) ? 99 : nPetal + 5;
                         break;
                     case Atidode:
@@ -504,7 +503,7 @@ report*  walkthrough (knight& theKnight, castle arrCastle[], int nCastle, int mo
             if (!beatUltimecia) {
                 int tempLevel = theKnight.level;
                 theKnight.level = (theKnight.level == 10) ? 10 : theKnight.level + 1;
-                if (theKnight.level > tempLevel) maxHP = ((maxHP + 100) > 999)  ? 999 : maxHP + 100;
+                if (theKnight.level > tempLevel) myMaxHP = ((myMaxHP + 100) > 999)  ? 999 : myMaxHP + 100;
             }
         }
         if (beatUltimecia) {
